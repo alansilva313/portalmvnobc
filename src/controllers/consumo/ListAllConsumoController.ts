@@ -1,14 +1,27 @@
 import axios from "axios";
 import { limparCpfCnpj } from "../../utils/removePointsDocument";
 
+function extrairGbDaDescricao(descricao: string) {
+  const regex = /(\d+)\s*gb?/gi;
+  const matches = descricao.match(regex);
+
+  if (!matches) return [];
+
+  return matches.map((item: string) =>
+    Number(item.replace(/gb?/i, "").trim())
+  );
+}
+
 export default class ListAllConsumoController {
   async list(req: any, res: any) {
-    const { periodo, cpf_cnpj, numero_contrato, linha_contrato }: any = req.body;
+    const { periodo, cpf_cnpj, numero_contrato, linha_contrato, portabilidade }: any = req.body;
 
     const URL_TIP = process.env.URL_TIP;
     const TOKEN_TIP = process.env.TOKEN_TIP;
 
     const documento = limparCpfCnpj(cpf_cnpj);
+
+    console.log("📌 Portabilidade recebida:", portabilidade);
 
     try {
       const data: any = { periodo };
@@ -30,9 +43,6 @@ export default class ListAllConsumoController {
       const consumos = response.data?.data?.results || response.data?.results || [];
       const planos = result.data?.data || result.data || [];
 
-      console.log("📦 Quantidade de consumos:", consumos.length);
-      console.log("📦 Quantidade de planos:", planos.length);
-
       // 🔹 Faz o join
       const consumosComPlano = consumos.map((consumo: any) => {
         const idPlano = Number(consumo.id_plano);
@@ -43,7 +53,28 @@ export default class ListAllConsumoController {
           return { ...consumo, plano_detalhes: null };
         }
 
-        const limiteDados = Number(planoRelacionado.quantity?.dados || 0);
+        // ==========================================
+        // 🔥 EXTRAI OS GB DA DESCRIÇÃO
+        // ==========================================
+        const valoresGb = extrairGbDaDescricao(planoRelacionado.description);
+
+        const primeiroGb = valoresGb[0] ?? 0; // ex: 5GB
+        const adicionalGb = valoresGb[1] ?? 0; // ex: 3GB
+
+        // converter para MB
+        const primeiroMb = primeiroGb * 1024;
+        const adicionalMb = adicionalGb * 1024;
+
+        // ==========================================
+        // 🔥 REGRA FINAL
+        // Se portabilidade = "Sim" → soma
+        // Se portabilidade = "Não" → pega só o primeiro valor
+        // ==========================================
+        const limiteDados =
+          portabilidade?.toLowerCase() === "sim"
+            ? primeiroMb + adicionalMb
+            : primeiroMb;
+
         const limiteSMS = Number(planoRelacionado.quantity?.sms || 0);
         const limiteVoz = Number(planoRelacionado.quantity?.telefonia || 0);
 
@@ -58,7 +89,7 @@ export default class ListAllConsumoController {
             descricao_plano: planoRelacionado.description,
             rede: planoRelacionado.rede,
             limites: {
-              dados_total_mb: limiteDados,
+              dados_total_mb: limiteDados, // 👈 AQUI A REGRA FUNCIONA!
               sms_total: limiteSMS,
               voz_total_min: limiteVoz,
             },

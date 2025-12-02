@@ -12,6 +12,8 @@ export default class ConsumoDetalhadoController {
       const planosResp: any = await axios.get(`${URL_TIP}/planos?user_token=${TOKEN_TIP}`);
       const planos = planosResp.data?.data || [];
 
+      console.log(planosResp)
+
       // 2️⃣ Buscar todos os consumos do período
       const consumoBody: any = { periodo };
       if (cpf_cnpj) consumoBody.cpf_cnpj = cpf_cnpj;
@@ -23,6 +25,8 @@ export default class ConsumoDetalhadoController {
       );
 
       const consumos = consumoResp.data?.results || [];
+
+      console.log(consumos)
 
       // 3️⃣ Montar resultado detalhado por linha
       const resultado = consumos.map((c: any) => {
