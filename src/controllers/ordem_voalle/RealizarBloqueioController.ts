@@ -5,9 +5,9 @@ export default class RealizarBloqueio{
 
     async bloq(req: any, res: any){
 
-        const { clientId, contractServiceTagId, contractServiceTagCategory, motivo, document } = req.body;
+        const { clientId, contractServiceTagId, motivo, document } = req.body;
 
-        if(!clientId  || !motivo || !contractServiceTagId || !contractServiceTagCategory) return res.status(400).json({
+        if(!clientId  || !motivo || !contractServiceTagId) return res.status(400).json({
             message: "Dados obrigatorios não enviados!"
         })
         try {
