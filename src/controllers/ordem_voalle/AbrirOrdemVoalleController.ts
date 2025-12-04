@@ -7,7 +7,7 @@ import ListarEtiquetasController from "../etiquetas/ListarEtiquetasController";
 
 
 export default class AbrirordemVoalleController {
-  async criarOrdemVoalle(clientId: any, personId: any, contractServiceTagId: any, motivo: any, document: any) {
+  async criarOrdemVoalle(clientId: any,  contractServiceTagId: any, motivo: any, document: any) {
 
 
 
@@ -18,7 +18,7 @@ export default class AbrirordemVoalleController {
    
     const body = {
       incidentStatusId: 4,
-      personId: personId,
+      personId: "219945",
       clientId: clientId,
       incidentTypeId: String(process.env.CATEGORIA_T_PRODUCAO),
       contractServiceTagId: String(contractServiceTagId),
