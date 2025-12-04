@@ -11,6 +11,8 @@ import ListarContratosServicoMvnoController from "../controllers/contratos_mvno/
 import BloquearSimCardController from "../controllers/bloquear/BloquearSimCardController";
 import DesbloquearSimCardController from "../controllers/desbloquear/DesbloquearNumeroController";
 import StatusPortabilidadeController from "../controllers/statusport/StatusPortabilidadeController";
+import RealizarBloqueio from "../controllers/ordem_voalle/RealizarBloqueioController";
+import ListarEtiquetasController from "../controllers/etiquetas/ListarEtiquetasController";
 
 
 const authUserPortalController = new AuthUserPortalController();
@@ -28,6 +30,12 @@ const bloquearSimCardController = new BloquearSimCardController();
 
 const desbloquearSimCardController = new DesbloquearSimCardController();
 const statusPortabilidadeController = new StatusPortabilidadeController();
+const realizarBloqueio = new RealizarBloqueio();
+
+const listarEtiquetasController = new ListarEtiquetasController();
+
+
+
 
 const router = Router()
 
@@ -45,6 +53,9 @@ router.post("/contratos/servicos", listarContratosServicoMvnoController.list);
 router.post("/contratos/bloqueio", bloquearSimCardController.bloqueio);
 router.post("/contratos/desbloquear", desbloquearSimCardController.desbloqueio)
 router.post("/acompanhamento/portabilidade", statusPortabilidadeController.port)
+router.post(`/bloqueio/ordem`, realizarBloqueio.bloq);
+
+router.post("/etiquetas", listarEtiquetasController.list);
 
 
 
