@@ -33,8 +33,8 @@ export default class StatusPortabilidadeController {
             
         } catch (error: any) {
 
-            return res.status(500).json({
-                message: error.message
+            return res.status(400).json({
+                message: "Simcard ou Numero não existe"
             })
            
         }
