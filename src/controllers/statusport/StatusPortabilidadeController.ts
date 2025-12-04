@@ -31,10 +31,10 @@ export default class StatusPortabilidadeController {
                 ...result.data
             })
             
-        } catch (error) {
+        } catch (error: any) {
 
             return res.status(500).json({
-                message: "Erro ao listar status de portabilidade!"
+                message: error.message
             })
            
         }
