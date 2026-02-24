@@ -1,13 +1,14 @@
 import axios from "axios";
 import returnToken from "../../auth/returnToken";
+import { prisma } from "../../config/PrismaClient";
 
 export default class GerarFaturaController {
 
     async gerar(req: any, res: any) {
 
-        const { item_id, plano, document, contractNumber } = req.body;
+        const { item_id, plano, document, contractNumber, simcard, msisdn } = req.body;
 
-        if (!plano || !document || !contractNumber || !item_id) {
+        if (!plano || !document || !contractNumber || !item_id || !simcard || !msisdn) {
             return res.status(400).json({
                 message: "Dados obrigatórios não informados"
             });
@@ -46,7 +47,7 @@ export default class GerarFaturaController {
                 ]
             };
 
-            const response = await axios.post(
+            const response: any = await axios.post(
                 "https://erp.internetway.com.br:45715/external/integrations/thirdparty/salerequest",
                 body,
                 {
@@ -57,6 +58,20 @@ export default class GerarFaturaController {
                     }
                 }
             );
+
+            // Salvar no banco de dados local
+            await prisma.recarga.create({
+                data: {
+                    simcard,
+                    msisdn,
+                    item_id,
+                    plano: String(plano),
+                    documento: document,
+                    contractNumber: String(contractNumber),
+                    status: "PENDENTE",
+                    external_id: String(response.data?.id || response.data?.txId || "")
+                }
+            });
 
             return res.status(200).json(response.data);
 

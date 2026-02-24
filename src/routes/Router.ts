@@ -15,6 +15,7 @@ import RealizarBloqueio from "../controllers/ordem_voalle/RealizarBloqueioContro
 import ListarEtiquetasController from "../controllers/etiquetas/ListarEtiquetasController";
 import RecargaController from "../controllers/recarga/RecargaController";
 import GerarFaturaController from "../controllers/fatura/GerarFaturaController";
+import ConfirmarPagamentoController from "../controllers/recarga/ConfirmarPagamentoController";
 
 
 const authUserPortalController = new AuthUserPortalController();
@@ -38,6 +39,7 @@ const listarEtiquetasController = new ListarEtiquetasController();
 const recarga = new RecargaController();
 
 const gerarFatura = new GerarFaturaController();
+const confirmarPagamento = new ConfirmarPagamentoController();
 
 
 
@@ -63,8 +65,8 @@ router.post(`/bloqueio/ordem`, realizarBloqueio.bloq);
 router.post("/etiquetas", listarEtiquetasController.list);
 
 router.post("/solicitacao/recarga", recarga.recarga);
-
-router.post("/solicitacao/fatura", gerarFatura.gerar)
+router.post("/solicitacao/fatura", gerarFatura.gerar);
+router.post("/solicitacao/pagamento", confirmarPagamento.confirmar);
 
 
 

@@ -25,4 +25,18 @@ model Bloqueio {
 
   @@map("bloqueio")
 }
+model Recarga {
+  id              String   @id @default(uuid())
+  simcard         String
+  msisdn          String
+  item_id         String
+  plano           String
+  documento       String
+  contractNumber  String
+  status          String   @default("PENDENTE") // PENDENTE, CONCLUIDO, CANCELADO
+  external_id     String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
+  @@map("recargas")
+}

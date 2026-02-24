@@ -1,4 +1,5 @@
 import axios from "axios";
+import { prisma } from "../../config/PrismaClient";
 
 export default class RecargaController {
 
@@ -46,10 +47,25 @@ export default class RecargaController {
                 dataUltimaRecarga.getMonth() === hoje.getMonth() &&
                 dataUltimaRecarga.getFullYear() === hoje.getFullYear();
 
-            if(mesmoMes) return res.status(401).json({
+            if (mesmoMes) return res.status(401).json({
                 message: "Tem uma recarga no mesmo mês, por esse motivo não foi possivel registrar a recarga",
                 status: 400
             });
+
+            // 🔍 Verificar se existe recarga pendente no banco local
+            const recargaPendente = await prisma.recarga.findFirst({
+                where: {
+                    simcard: String(simcard),
+                    status: "PENDENTE"
+                }
+            });
+
+            if (recargaPendente) {
+                return res.status(401).json({
+                    message: "Já existe uma solicitação de recarga pendente para esta linha. Aguarde a confirmação do pagamento.",
+                    status: 401
+                });
+            }
 
 
             return res.status(201).json({
