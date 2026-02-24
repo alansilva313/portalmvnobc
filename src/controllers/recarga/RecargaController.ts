@@ -7,7 +7,7 @@ export default class RecargaController {
 
         const urlTip = process.env.URL_TIP;
         const user_token = process.env.TOKEN_TIP;
-        const { simcard } = req.body;
+        const { simcard, cpf, contrato } = req.body;
 
         const plano_1 = '1Gb';
         const plano_2 = '2Gb';
@@ -24,45 +24,73 @@ export default class RecargaController {
             return res.status(400).json({ message: "Simcard é obrigatório" });
         }
 
-        const url = `${urlTip}/simcard/${simcard}/ultima-recarga?user_token=${user_token}`;
-
         try {
+            // 🔍 1. Verificar na InternetWay se existe recarga pendente
+            if (cpf && contrato) {
+                const checkUrl = 'https://apis.internetway.com.br/consulta_recargas.php';
+                const checkBody = {
+                    cpf: String(cpf).replace(/\D/g, ''),
+                    contrato: String(contrato)
+                };
 
+                const checkResponse = await axios.post(checkUrl, checkBody, {
+                    headers: {
+                        'Usuario': 'integracao',
+                        'Senha': 'W@y1z4z!#2024',
+                        'Token': 'ac0r3YH4ATzUTyyar36p8dBkpSAYWFfr',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const apiData = checkResponse.data as any;
+
+                if (apiData && apiData["Recargas MVNO"]) {
+                    const recargas = apiData["Recargas MVNO"];
+                    // Se existe alguma recarga que NÃO está paga e NÃO está cancelada, bloqueia
+                    const temPendente = recargas.some((r: any) =>
+                        r.pago && r.pago.toUpperCase() === "NAO" &&
+                        r.cancelado && r.cancelado.toUpperCase() === "NAO"
+                    );
+
+                    if (temPendente) {
+                        return res.status(401).json({
+                            message: "Já existe uma solicitação de recarga pendente para esta conta. Por favor, realize o pagamento da fatura anterior para solicitar uma nova.",
+                            status: 401
+                        });
+                    }
+                }
+            }
+
+            // 🔍 2. Consultar última recarga na TIP (Validação de 1 recarga por mês)
+            const url = `${urlTip}/simcard/${simcard}/ultima-recarga?user_token=${user_token}`;
             const response = await axios.get(url);
             const result: any = response.data;
 
-            if (!result || !result.ultima_recarga) {
-                return res.status(400).json({
-                    message: "Falha ao listar última recarga!"
+            if (result && result.ultima_recarga) {
+                const dataUltimaRecarga = new Date(result.ultima_recarga);
+                const hoje = new Date();
+
+                const mesmoMes =
+                    dataUltimaRecarga.getMonth() === hoje.getMonth() &&
+                    dataUltimaRecarga.getFullYear() === hoje.getFullYear();
+
+                if (mesmoMes) return res.status(401).json({
+                    message: "Você já possui uma recarga ativa para este mês nesta linha.",
+                    status: 401
                 });
             }
 
-            // 📅 Data da última recarga
-            const dataUltimaRecarga = new Date(result.ultima_recarga);
-
-            // 📅 Data atual
-            const hoje = new Date();
-
-            const mesmoMes =
-                dataUltimaRecarga.getMonth() === hoje.getMonth() &&
-                dataUltimaRecarga.getFullYear() === hoje.getFullYear();
-
-            if (mesmoMes) return res.status(401).json({
-                message: "Tem uma recarga no mesmo mês, por esse motivo não foi possivel registrar a recarga",
-                status: 400
-            });
-
-            // 🔍 Verificar se existe recarga pendente no banco local
-            const recargaPendente = await prisma.recarga.findFirst({
+            // 🔍 3. Verificar se existe recarga pendente no banco local (redundância)
+            const recargaPendenteLocal = await prisma.recarga.findFirst({
                 where: {
                     simcard: String(simcard),
                     status: "PENDENTE"
                 }
             });
 
-            if (recargaPendente) {
+            if (recargaPendenteLocal) {
                 return res.status(401).json({
-                    message: "Já existe uma solicitação de recarga pendente para esta linha. Aguarde a confirmação do pagamento.",
+                    message: "Já existe uma solicitação de recarga processando para esta linha.",
                     status: 401
                 });
             }

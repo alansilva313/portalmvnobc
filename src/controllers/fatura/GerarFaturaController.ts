@@ -69,7 +69,7 @@ export default class GerarFaturaController {
                     documento: document,
                     contractNumber: String(contractNumber),
                     status: "PENDENTE",
-                    external_id: String(response.data?.id || response.data?.txId || "")
+                    external_id: String(response.data?.response?.salesOrderNumber || response.data?.id || response.data?.txId || "")
                 }
             });
 
