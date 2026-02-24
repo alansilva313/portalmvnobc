@@ -5,11 +5,33 @@ export default class ListarRecargasController {
     async listar(req: any, res: any) {
         const { documento, contrato, simcard, status } = req.body;
 
+        const localDateFromTitle = (title: string) => {
+            if (!title) return new Date().toISOString();
+
+            // Caso 1: DD/MM/YYYY
+            const matchBR = title.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (matchBR) {
+                const [_, day, month, year] = matchBR;
+                return new Date(`${year}-${month}-${day}`).toISOString();
+            }
+
+            // Caso 2: FATYYMMDD (Ex: FAT260224...)
+            const matchFAT = title.match(/FAT(\d{2})(\d{2})(\d{2})/);
+            if (matchFAT) {
+                const [_, yearShort, month, day] = matchFAT;
+                const year = `20${yearShort}`;
+                return new Date(`${year}-${month}-${day}`).toISOString();
+            }
+
+            return new Date().toISOString();
+        };
+
         try {
             // 1. Buscar recargas no banco local
             const recargasLocais = await prisma.recarga.findMany({
                 where: {
                     documento: documento ? String(documento) : undefined,
+                    contractNumber: contrato ? String(contrato) : undefined,
                     simcard: simcard ? String(simcard) : undefined,
                     status: status ? String(status) : undefined,
                 },
@@ -41,9 +63,11 @@ export default class ListarRecargasController {
                     if (apiData && apiData["Recargas MVNO"]) {
                         const recargasAPI = apiData["Recargas MVNO"];
 
-                        // Mesclar dados da API com os dados locais
+                        // 1. Criar um Set de external_ids das recargas locais para facilitar a identificação
+                        const localExternalIds = new Set(recargasLocais.map(l => l.external_id).filter(Boolean));
+
+                        // 2. Mapear as recargas locais com dados da API
                         const recargasMescladas = recargasLocais.map(local => {
-                            // Tentar encontrar o pedido correspondente na API
                             const correspondente = recargasAPI.find((r: any) =>
                                 String(r.pedido_venda) === local.external_id
                             );
@@ -56,14 +80,42 @@ export default class ListarRecargasController {
                                     linha_digitavel: correspondente.linha_digitavel,
                                     qr_codepix: correspondente.qr_codepix,
                                     notificado: correspondente.notificado,
-                                    v_final_amount: correspondente.v_final_amount
+                                    v_final_amount: correspondente.v_final_amount,
+                                    description: correspondente.description
                                 };
                             }
-
                             return local;
                         });
 
-                        return res.status(200).json(recargasMescladas);
+                        // 3. Adicionar recargas da API que NÃO estão no banco local e pertencem ao contrato atual
+                        const novasDaAPI = recargasAPI
+                            .filter((r: any) =>
+                                !localExternalIds.has(String(r.pedido_venda)) &&
+                                String(r.contract_number) === String(contrato)
+                            )
+                            .map((r: any) => ({
+                                id: `api-${r.pedido_venda}`,
+                                simcard: "", // Não temos no ERP diretamente as vezes
+                                msisdn: "",
+                                item_id: "",
+                                plano: r.v_final_amount || r.title_amount,
+                                documento: r.tx_id,
+                                contractNumber: r.contract_number,
+                                status: r.pago.toUpperCase() === "SIM" ? "CONCLUIDO" :
+                                    r.cancelado.toUpperCase() === "SIM" ? "CANCELADO" : "PENDENTE",
+                                external_id: String(r.pedido_venda),
+                                created_at: localDateFromTitle(r.title), // Tentar extrair data do título se possível
+                                updated_at: new Date().toISOString(),
+                                linha_digitavel: r.linha_digitavel,
+                                qr_codepix: r.qr_codepix,
+                                description: r.description
+                            }));
+
+                        const resultadoFinal = [...recargasMescladas, ...novasDaAPI].sort((a: any, b: any) =>
+                            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        );
+
+                        return res.status(200).json(resultadoFinal);
                     }
                 } catch (apiError) {
                     console.error("Erro ao consultar API externa de recargas:", apiError);
