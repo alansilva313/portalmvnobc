@@ -16,6 +16,7 @@ import ListarEtiquetasController from "../controllers/etiquetas/ListarEtiquetasC
 import RecargaController from "../controllers/recarga/RecargaController";
 import GerarFaturaController from "../controllers/fatura/GerarFaturaController";
 import ConfirmarPagamentoController from "../controllers/recarga/ConfirmarPagamentoController";
+import ListarRecargasController from "../controllers/recarga/ListarRecargasController";
 
 
 const authUserPortalController = new AuthUserPortalController();
@@ -40,6 +41,7 @@ const recarga = new RecargaController();
 
 const gerarFatura = new GerarFaturaController();
 const confirmarPagamento = new ConfirmarPagamentoController();
+const listarRecargas = new ListarRecargasController();
 
 
 
@@ -67,6 +69,7 @@ router.post("/etiquetas", listarEtiquetasController.list);
 router.post("/solicitacao/recarga", recarga.recarga);
 router.post("/solicitacao/fatura", gerarFatura.gerar);
 router.post("/solicitacao/pagamento", confirmarPagamento.confirmar);
+router.post("/solicitacao/recarga/listar", listarRecargas.listar);
 
 
 
