@@ -13,6 +13,13 @@ export default class GerarFaturaController {
             });
         }
 
+        const valorPlano = Number(plano);
+        if (valorPlano !== 9.90 && valorPlano !== 17.90) {
+            return res.status(400).json({
+                message: "Valor do plano não permitido. Apenas 9.90 e 17.90 são aceitos."
+            });
+        }
+
 
 
         const tokenERP = await returnToken()
@@ -34,18 +41,18 @@ export default class GerarFaturaController {
                     {
                         id: item_id,
                         quantity: 1,
-                        unitValue: plano
+                        unitValue: valorPlano
                     }
                 ]
             };
 
             const response = await axios.post(
                 "https://erp.internetway.com.br:45715/external/integrations/thirdparty/salerequest",
-                body, 
+                body,
                 {
                     headers: {
                         accept: "application/json",
-                        Authorization: String(tokenBearer), 
+                        Authorization: String(tokenBearer),
                         "Content-Type": "application/json"
                     }
                 }
@@ -55,7 +62,7 @@ export default class GerarFaturaController {
 
         } catch (error: any) {
 
-       
+
 
             return res.status(500).json({
                 message: error?.response?.data || "Erro ao gerar fatura"
